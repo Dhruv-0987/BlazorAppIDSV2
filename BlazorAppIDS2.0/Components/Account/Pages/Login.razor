@@ -1,9 +1,11 @@
 ﻿@page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
+@using BlazorAppIDS2._0.Components.Account.Pages.Manage
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using BlazorAppIDS2._0.Data
+@using Microsoft.AspNetCore.Http.HttpResults
 
 @inject SignInManager<ApplicationUser> SignInManager
 @inject ILogger<Login> Logger
@@ -86,11 +88,15 @@
     {
         // This doesn't count login failures towards account lockout
         // To enable password failures to trigger account lockout, set lockoutOnFailure: true
+        HttpContext.Session.SetString("SubmittedEmailAddress", Input.Email);
         var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo(ReturnUrl);
+            if (IsLocalUrl(ReturnUrl))
+            {
+                NavigationManager.NavigateTo(ReturnUrl, forceLoad: true);
+            }
         }
         else if (result.RequiresTwoFactor)
         {
@@ -118,6 +124,14 @@
         public string Password { get; set; } = "";
 
         [Display(Name = "Remember me?")] public bool RememberMe { get; set; }
+    }
+    
+    public bool IsLocalUrl(string url)
+    {
+        // Basic check for local URLs to prevent open redirects
+        return !string.IsNullOrEmpty(url) &&
+               (url.StartsWith("/") && !url.StartsWith("//") && !url.StartsWith("/\\")) ||
+               url.StartsWith("~/");
     }
 
 }

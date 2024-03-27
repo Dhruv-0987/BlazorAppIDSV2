@@ -21,8 +21,6 @@ public class SeedData
                     UserName = "alice",
                     Email = "AliceSmith@email.com",
                     EmailConfirmed = true,
-                    FirstName = "Alice",
-                    LastName = "Smith"
                 };
                 var result = await userMgr.CreateAsync(alice, "Pass123$");
                 if (!result.Succeeded)
@@ -55,8 +53,6 @@ public class SeedData
                     UserName = "bob",
                     Email = "BobSmith@email.com",
                     EmailConfirmed = true,
-                    FirstName = "Bob",
-                    LastName = "Smith"
                 };
                 var result = await userMgr.CreateAsync(bob, "Pass123$");
                 if (!result.Succeeded)

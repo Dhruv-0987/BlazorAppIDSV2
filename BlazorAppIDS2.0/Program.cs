@@ -31,6 +31,13 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30); 
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true; 
+});
+
 var apiScopes = builder.Configuration.GetSection("ApiScopes").Get<List<ApiScope>>();
 var clients = builder.Configuration.GetSection("Clients").Get<List<Client>>();
 var identityResources = builder.Configuration.GetSection("IdentityResources").Get<List<IdentityResource>>();
@@ -43,8 +50,6 @@ builder.Services.AddIdentityServer(options =>
         options.Events.RaiseInformationEvents = true;
         options.Events.RaiseFailureEvents = true;
         options.Events.RaiseSuccessEvents = true;
-
-        // see https://docs.duendesoftware.com/identityserver/v6/fundamentals/resources/
         options.EmitStaticAudienceClaim = true;
     })
     .AddInMemoryClients(clients)
@@ -54,12 +59,27 @@ builder.Services.AddIdentityServer(options =>
     .AddAspNetIdentity<ApplicationUser>()
     .AddProfileService<MyProfileService>();
 
+
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
     })
     .AddIdentityCookies();
+
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("BlazorIds",
+        policy =>
+        {
+            policy.WithOrigins(allowedOrigins)
+                .SetIsOriginAllowedToAllowWildcardSubdomains()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
@@ -83,12 +103,18 @@ var scope = app.Services.GetRequiredService<IServiceScopeFactory>().CreateScope(
 var context = scope.ServiceProvider.GetService<ApplicationDbContext>();
 context.Database.Migrate();
 
+app.UseCors("BlazorIds");
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 app.UseAntiforgery();
 
-// adding IdentityServer middlewarez
+app.UseSession();
+
+app.UseRouting();
+app.UseAntiforgery();
+
+// IdentityServer middleware
 app.UseIdentityServer();
 app.UseAuthorization();
 
